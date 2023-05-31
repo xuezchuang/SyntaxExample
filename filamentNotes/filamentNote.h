@@ -6,6 +6,6 @@ void Test__forward();
 void Test_remove_reference();
 void Test_invoke();
 void Test_std_unique();
-//void Test6(){}
-//void Test7(){}
+void TestMITC();
+void TestCommand();
 //void Test8(){}

@@ -7,9 +7,9 @@ int main()
 	//Test__forward();
 	//Test_remove_reference();
 	//Test_invoke();
-	Test_std_unique();
-	//Test6();
-	//Test7();
+	//Test_std_unique();
+	//TestMITC();
+	TestCommand();
 	//Test8();
 	//Test9();
 	//Test10();
