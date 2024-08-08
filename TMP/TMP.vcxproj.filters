@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="源文件\ue_delegate">
+      <UniqueIdentifier>{f7c25ada-0039-4b0e-b626-9a97cbe287b1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="enable_if_t.cpp">
@@ -36,5 +39,34 @@
     <ClCompile Include="2.TIsDerivedFrom.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="RemoveReferenceTest.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="UE_Child.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="UE_Function.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="delegate\UE_Delegate.cpp">
+      <Filter>源文件\ue_delegate</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="delegate\IDelegateInstance.h">
+      <Filter>源文件\ue_delegate</Filter>
+    </ClInclude>
+    <ClInclude Include="delegate\DelegateInstanceInterface.h">
+      <Filter>源文件\ue_delegate</Filter>
+    </ClInclude>
+    <ClInclude Include="delegate\DelegateBase.h">
+      <Filter>源文件\ue_delegate</Filter>
+    </ClInclude>
+    <ClInclude Include="delegate\DelegateSignatureImpl.h">
+      <Filter>源文件\ue_delegate</Filter>
+    </ClInclude>
+    <ClInclude Include="delegate\DelegateInstancesImpl.h">
+      <Filter>源文件\ue_delegate</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
