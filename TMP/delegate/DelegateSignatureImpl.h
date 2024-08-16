@@ -49,4 +49,24 @@ public:
 	{
 		return (DelegateInstanceInterfaceType*)Super::GetDelegateInstanceProtected();
 	}
+
+	TDelegate& operator=(const TDelegate& Other)
+	{
+		if (&Other != this)
+		{
+			// this down-cast is OK! allows for managing invocation list in the base class without requiring virtual functions
+			DelegateInstanceInterfaceType* OtherInstance = Other.GetDelegateInstanceProtected();
+
+			if (OtherInstance != nullptr)
+			{
+				OtherInstance->CreateCopy(*this);
+			}
+			else
+			{
+				//Unbind();
+			}
+		}
+
+		return *this;
+	}
 };

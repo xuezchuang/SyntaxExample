@@ -61,13 +61,30 @@ struct TFunctionRefCaller<Functor, void(ParamTypes...)>
 int main()
 {
 	typedef TDelegate<void(int,int,int)> DelegateTest;
-	DelegateTest Delegate;
+
 	int tol = 0;
-	Delegate.BindLambda([&](int a,int b,int c)
-		{
-			tol = a + b+c;
-		});
-	Delegate.Execute(3,4,5);
+	DelegateTest Delegate_b;
+	{
+		DelegateTest Delegate;
+		
+		Delegate.BindLambda([&](int a, int b, int c)
+			{
+				tol = a + b + c;
+			});
+		//Delegate.Execute(3, 4, 5);
+
+		Delegate_b = Delegate;
+	}
+
+	Delegate_b.Execute(3, 4, 5);
+
+	//typedef TDelegate<void()> DelegateNoParam;
+	//DelegateNoParam DelegateInstanceNoparam;
+	//DelegateInstanceNoparam.BindLambda([&]
+	//	{
+	//		tol++;
+	//	});
+	//DelegateInstanceNoparam.Execute();
 	return 0;
 }
 

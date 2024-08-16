@@ -16,6 +16,9 @@
     <Filter Include="源文件\ue_delegate">
       <UniqueIdentifier>{f7c25ada-0039-4b0e-b626-9a97cbe287b1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\ue_function">
+      <UniqueIdentifier>{7a348c85-9ecb-423f-8310-3dfc95b5507c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="enable_if_t.cpp">
@@ -45,11 +48,11 @@
     <ClCompile Include="UE_Child.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="UE_Function.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="delegate\UE_Delegate.cpp">
       <Filter>源文件\ue_delegate</Filter>
+    </ClCompile>
+    <ClCompile Include="function\UE_Function.cpp">
+      <Filter>源文件\ue_function</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -67,6 +70,9 @@
     </ClInclude>
     <ClInclude Include="delegate\DelegateInstancesImpl.h">
       <Filter>源文件\ue_delegate</Filter>
+    </ClInclude>
+    <ClInclude Include="function\Function.h">
+      <Filter>源文件\ue_function</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

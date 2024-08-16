@@ -32,6 +32,47 @@ protected:
 template <typename FuncType, typename UserPolicy, typename FunctorType, typename... VarTypes>
 class TBaseFunctorDelegateInstance;
 
+
+class FTest
+{
+public:
+	FTest()
+	{
+		int a = 0;
+	}
+	FTest(FTest&& other) noexcept 
+	{
+		a = other.a;
+	}
+
+	// 需要显式定义拷贝构造函数
+	FTest(const FTest& other) 
+	{
+		a = other.a;
+	}
+
+	// 需要显式定义拷贝赋值运算符
+	FTest& operator=(const FTest& other)
+	{
+		if (this != &other)
+		{
+			a = other.a;
+		}
+		return *this;
+	}
+
+	// 移动赋值运算符
+	FTest& operator=(FTest&& other) noexcept 
+	{
+		if (this != &other)
+		{
+			a = other.a;
+		}
+		return *this;
+	}
+	int a = 0;
+};
+
 template <typename RetValType, typename... ParamTypes, typename UserPolicy, typename FunctorType, typename... VarTypes>
 class TBaseFunctorDelegateInstance<RetValType(ParamTypes...), UserPolicy, FunctorType, VarTypes...> : public TCommonDelegateInstanceState<RetValType(ParamTypes...), UserPolicy, VarTypes...>
 {
@@ -103,7 +144,8 @@ public:
 	{
 		typedef T Type;
 	};
-
+	//Struct_Copy jjj;
+	FTest m_a;
 private:
 	// C++ functor
 	// We make this mutable to allow mutable lambdas to be bound and executed.  We don't really want to
