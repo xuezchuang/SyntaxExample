@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="TaskGraph">
+      <UniqueIdentifier>{0da578a5-5c78-4c8b-a3f4-37d3a6950bd3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TaskGraph\NewFilter1">
+      <UniqueIdentifier>{e4c6e797-7c4a-423d-8bd9-df4fc9d4c05e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TaskGraph.cpp">
+      <Filter>TaskGraph</Filter>
+    </ClCompile>
+    <ClCompile Include="LockFreeList.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="TaskGraph.h">
+      <Filter>TaskGraph</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeList.h" />
+    <ClInclude Include="ThreadSafeCounter.h">
+      <Filter>TaskGraph</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderingThread.h" />
+    <ClInclude Include="TaskGraphInterfaces.h" />
+    <ClInclude Include="GenericPlatform.h" />
+    <ClInclude Include="UnrealTemplate.h">
+      <Filter>TaskGraph</Filter>
+    </ClInclude>
+    <ClInclude Include="RunableThread.h" />
+  </ItemGroup>
+</Project>
