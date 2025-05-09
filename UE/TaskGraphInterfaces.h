@@ -46,6 +46,12 @@ public:
 
 	static FTaskGraphInterface& Get();
 
+	/** 
+	*	Requests that a named thread, which must be this thread, run until an explicit return request is received, then return.
+	*	@param	CurrentThread; The name of this thread
+	**/
+	virtual void ProcessThreadUntilRequestReturn(ENamedThreads::Type CurrentThread)=0;
+
 };
 /** 
 *	Base class for all tasks. 

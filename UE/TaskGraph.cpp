@@ -3,6 +3,9 @@
 #include "TaskGraphInterfaces.h"
 #include "LockFreeList.h"
 #include "RunableThread.h"
+#include <malloc.h> 
+#include <thread>  
+#include <chrono>  
 
 #pragma region TaskGraph
 
@@ -30,6 +33,28 @@ TGraphTask 构建任务，设置目标线程 = RenderThread
 static FTaskGraphInterface* TaskGraphImplementationSingleton = NULL;
 
 /**
+*	FWorkerThread
+*	Helper structure to aggregate a few items related to the individual threads.
+**/
+struct FWorkerThread
+{
+	/** The actual FTaskThread that manager this task **/
+	FTaskThreadBase* TaskGraphWorker;
+	/** For internal threads, the is non-NULL and holds the information about the runable thread that was created. **/
+	FRunnableThread* RunnableThread;
+	/** For external threads, this determines if they have been "attached" yet. Attachment is mostly setting up TLS for this individual thread. **/
+	bool				bAttached;
+
+	/** Constructor to set reasonable defaults. **/
+	FWorkerThread()
+		: TaskGraphWorker(nullptr)
+		, RunnableThread(nullptr)
+		, bAttached(false)
+	{
+	}
+};
+
+/**
 *	FTaskGraphImplementation
 *	Implementation of the centralized part of the task graph system.
 *	These parts of the system have no knowledge of the dependency graph, they exclusively work on tasks.
@@ -43,6 +68,27 @@ static FTaskGraphInterface* TaskGraphImplementationSingleton = NULL;
 class FTaskThreadBase
 {
 public:
+	/** Constructor, initializes everything to unusable values. Meant to be called from a "main" thread. **/
+	FTaskThreadBase()
+		: OwnerWorker(nullptr)
+	{
+		NewTasks.resize(128);
+	}
+
+	/** 
+	*	Sets up some basic information for a thread. Meant to be called from a "main" thread. Also creates the stall event.
+	*	@param InThreadId; Thread index for this thread.
+	*	@param InPerThreadIDTLSSlot; TLS slot to store the pointer to me into (later)
+	**/
+	void Setup(ENamedThreads::Type InThreadId,/* uint32 InPerThreadIDTLSSlot,*/ FWorkerThread* InOwnerWorker)
+	{
+		ThreadId = InThreadId;
+		//check(ThreadId >= 0);
+		//PerThreadIDTLSSlot = InPerThreadIDTLSSlot;
+		OwnerWorker = InOwnerWorker;
+	}
+
+
 	uint32 Run()
 	{
 		//check(OwnerWorker); // make sure we are started up
@@ -58,6 +104,10 @@ public:
 
 protected:
 	std::vector<FBaseGraphTask*> NewTasks;
+	/** Id / Index of this thread. **/
+	ENamedThreads::Type									ThreadId;
+	/** back pointer to the owning FWorkerThread **/
+	FWorkerThread* OwnerWorker;
 };
 
 /** 
@@ -98,6 +148,7 @@ public:
 			//TestRandomizedThreads();
 			if (!Task)
 			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));  
 				//if (bAllowStall)
 				//{
 				//	TRACE_CPUPROFILER_EVENT_SCOPE(WaitForTasks);
@@ -132,7 +183,7 @@ public:
 		//TestRandomizedThreads();
 		//checkThreadGraph(Task && Queue(QueueIndex).StallRestartEvent); // make sure we are started up
 
-		uint32 PriIndex = /*ENamedThreads::GetTaskPriority(Task->GetThreadToExecuteOn()) ? 0 :*/ 1;
+		uint32 PriIndex = /*ENamedThreads::GetTaskPriority(Task->GetThreadToExecuteOn()) ? 0 :*/ 0;
 		int32 ThreadToStart = Queues.StallQueue.Push(Task, PriIndex);
 
 		//if (ThreadToStart >= 0)
@@ -183,33 +234,23 @@ private:
 
 };
 
-/** 
-*	FWorkerThread
-*	Helper structure to aggregate a few items related to the individual threads.
-**/
-struct FWorkerThread
-{
-	/** The actual FTaskThread that manager this task **/
-	FTaskThreadBase*	TaskGraphWorker;
-	/** For internal threads, the is non-NULL and holds the information about the runable thread that was created. **/
-	FRunnableThread*	RunnableThread;
-	/** For external threads, this determines if they have been "attached" yet. Attachment is mostly setting up TLS for this individual thread. **/
-	bool				bAttached;
 
-	/** Constructor to set reasonable defaults. **/
-	FWorkerThread()
-		: TaskGraphWorker(nullptr)
-		, RunnableThread(nullptr)
-		, bAttached(false)
-	{
-	}
-};
 
 class FTaskGraphImplementation final : public FTaskGraphInterface
 {
 public:
 	FTaskGraphImplementation(int32)
 	{
+		int32 NumThreads = ENamedThreads::AnyThread;
+		for (int32 ThreadIndex = 0; ThreadIndex < NumThreads; ThreadIndex++)
+		{
+			void* mem = _aligned_malloc(sizeof(FNamedTaskThread), alignof(FNamedTaskThread));
+
+
+			WorkerThreads[ThreadIndex].TaskGraphWorker = new (mem)FNamedTaskThread();
+			WorkerThreads[ThreadIndex].TaskGraphWorker->Setup(ENamedThreads::Type(ThreadIndex), /*PerThreadIDTLSSlot,*/ &WorkerThreads[ThreadIndex]);
+		}
+
 		TaskGraphImplementationSingleton = this;
 	}
 
@@ -297,6 +338,15 @@ private:
 		return *WorkerThreads[Index].TaskGraphWorker;
 	}
 
+	void ProcessThreadUntilRequestReturn(ENamedThreads::Type CurrentThread) final override
+	{
+		//int32 QueueIndex = ENamedThreads::GetQueueIndex(CurrentThread);
+		//CurrentThread = ENamedThreads::GetThreadIndex(CurrentThread);
+		//check(CurrentThread >= 0 && CurrentThread < NumNamedThreads);
+		//check(CurrentThread == GetCurrentThread());
+		Thread(CurrentThread).ProcessTasksUntilQuit(0);
+	}
+
 	enum
 	{
 		/** Compile time maximum number of threads. Didn't really need to be a compile time constant, but task thread are limited by MAX_LOCK_FREE_LINKS_AS_BITS **/
@@ -319,15 +369,31 @@ void FTaskGraphInterface::Startup(int32 NumThreads)
 	new FTaskGraphImplementation(NumThreads);
 }
 
+
+
+
 int main()
 {
 	FTaskGraphInterface::Get().Startup(0);
 
-	ENQUEUE_RENDER_COMMAND(CaptureCommand)(
-		[]()
-		{
-			int a = 0;
-		}
-		);
+
+
+
+	StartRenderingThread();
+
+	int a = 0;
+	do 
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));  
+		a++;
+		ENQUEUE_RENDER_COMMAND(CaptureCommand)(
+			[&a]()
+			{
+				printf("%d\n",a);
+			}
+			);
+
+	} while (1);
+
 	return 0;
 }

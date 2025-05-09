@@ -54,3 +54,4 @@ void EnqueueUniqueRenderCommand(LAMBDA&& Lambda)
 	TGraphTask<EURCType>::CreateTask().ConstructAndDispatchWhenReady(Forward<LAMBDA>(Lambda));
 }
 
+void StartRenderingThread();

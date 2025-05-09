@@ -17,6 +17,9 @@
       <Filter>TaskGraph</Filter>
     </ClCompile>
     <ClCompile Include="LockFreeList.cpp" />
+    <ClCompile Include="RenderingThread.cpp" />
+    <ClCompile Include="WindowsRunnableThread.cpp" />
+    <ClCompile Include="ThreadingBase.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TaskGraph.h">
@@ -33,5 +36,7 @@
       <Filter>TaskGraph</Filter>
     </ClInclude>
     <ClInclude Include="RunableThread.h" />
+    <ClInclude Include="Runnable.h" />
+    <ClInclude Include="WindowsRunnableThread.h" />
   </ItemGroup>
 </Project>

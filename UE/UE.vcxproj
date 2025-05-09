@@ -104,7 +104,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <CompileAsWinRT>false</CompileAsWinRT>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,14 +132,19 @@
     <ClInclude Include="LockFreeList.h" />
     <ClInclude Include="RenderingThread.h" />
     <ClInclude Include="RunableThread.h" />
+    <ClInclude Include="Runnable.h" />
     <ClInclude Include="TaskGraph.h" />
     <ClInclude Include="TaskGraphInterfaces.h" />
     <ClInclude Include="ThreadSafeCounter.h" />
     <ClInclude Include="UnrealTemplate.h" />
+    <ClInclude Include="WindowsRunnableThread.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LockFreeList.cpp" />
+    <ClCompile Include="RenderingThread.cpp" />
     <ClCompile Include="TaskGraph.cpp" />
+    <ClCompile Include="ThreadingBase.cpp" />
+    <ClCompile Include="WindowsRunnableThread.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
