@@ -38,5 +38,6 @@
     <ClInclude Include="RunableThread.h" />
     <ClInclude Include="Runnable.h" />
     <ClInclude Include="WindowsRunnableThread.h" />
+    <ClInclude Include="Event.h" />
   </ItemGroup>
 </Project>

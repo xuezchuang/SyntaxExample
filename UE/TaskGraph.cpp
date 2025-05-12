@@ -3,6 +3,7 @@
 #include "TaskGraphInterfaces.h"
 #include "LockFreeList.h"
 #include "RunableThread.h"
+#include "Event.h"
 #include <malloc.h> 
 #include <thread>  
 #include <chrono>  
@@ -148,13 +149,13 @@ public:
 			//TestRandomizedThreads();
 			if (!Task)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(200));  
+				//std::this_thread::sleep_for(std::chrono::milliseconds(200));  
 				//if (bAllowStall)
 				//{
 				//	TRACE_CPUPROFILER_EVENT_SCOPE(WaitForTasks);
 				//	{
 				//		FScopeCycleCounter Scope(StallStatId, EStatFlags::Verbose);
-				//		Queue(QueueIndex).StallRestartEvent->Wait(bIsRenderThreadAndPolling ? GRenderThreadPollPeriodMs : MAX_uint32, bCountAsStall);
+						Queues.StallRestartEvent->Wait(INFINITE,false);
 				//		if (Queue(QueueIndex).QuitForShutdown)
 				//		{
 				//			return ProcessedTasks;
@@ -186,15 +187,15 @@ public:
 		uint32 PriIndex = /*ENamedThreads::GetTaskPriority(Task->GetThreadToExecuteOn()) ? 0 :*/ 0;
 		int32 ThreadToStart = Queues.StallQueue.Push(Task, PriIndex);
 
-		//if (ThreadToStart >= 0)
-		//{
+		if (ThreadToStart >= 0)
+		{
 			//checkThreadGraph(ThreadToStart == 0);
 			//QUICK_SCOPE_CYCLE_COUNTER(STAT_TaskGraph_EnqueueFromOtherThread_Trigger);
 			//TASKGRAPH_SCOPE_CYCLE_COUNTER(1, STAT_TaskGraph_EnqueueFromOtherThread_Trigger);
-			//Queue(QueueIndex).StallRestartEvent->Trigger();
+			Queues.StallRestartEvent->Trigger();
 			return true;
-		//}
-		//return false;
+		}
+		return false;
 	}
 
 private:
@@ -213,13 +214,13 @@ private:
 		bool QuitForShutdown;
 
 		/** Event that this thread blocks on when it runs out of work. **/
-		//FEvent* StallRestartEvent;
+		FEvent* StallRestartEvent;
 
 		FThreadTaskQueue()
 			: RecursionGuard(0)
 			, QuitForReturn(false)
 			, QuitForShutdown(false)
-			//, StallRestartEvent(FPlatformProcess::GetSynchEventFromPool(false))
+			, StallRestartEvent(new FEventWin())
 		{
 
 		}
