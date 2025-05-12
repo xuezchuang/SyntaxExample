@@ -53,11 +53,12 @@ public:
 	virtual void ProcessThreadUntilRequestReturn(ENamedThreads::Type CurrentThread)=0;
 
 };
+
+
 /** 
 *	Base class for all tasks. 
 *	Tasks go through a very specific life stage progression, and this is verified.
 **/
-
 class FBaseGraphTask //: private UE::FInheritedContextBase
 {
 protected:
