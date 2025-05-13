@@ -109,7 +109,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>D:\code\SyntaxExample\thirdy\mimalloc\bin\mimalloc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -149,7 +150,19 @@
     <ClCompile Include="ThreadingBase.cpp" />
     <ClCompile Include="WindowsRunnableThread.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\HBAO.1.0.5\build\native\HBAO.targets" Condition="Exists('..\packages\HBAO.1.0.5\build\native\HBAO.targets')" />
+    <Import Project="..\packages\mimalloc.1.1.1\build\native\mimalloc.targets" Condition="Exists('..\packages\mimalloc.1.1.1\build\native\mimalloc.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\HBAO.1.0.5\build\native\HBAO.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\HBAO.1.0.5\build\native\HBAO.targets'))" />
+    <Error Condition="!Exists('..\packages\mimalloc.1.1.1\build\native\mimalloc.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\mimalloc.1.1.1\build\native\mimalloc.targets'))" />
+  </Target>
 </Project>

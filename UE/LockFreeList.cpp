@@ -2,7 +2,8 @@
 #include < windows.h >
 #include <new> // 这是 C++ 标准库定义 placement new 所必需的
 
-#include "../thirdy/mimalloc/include/mimalloc.h"
+
+#include "mimalloc.h"
 
 void LockFreeLinksExhausted(uint32 TotalNum)
 {

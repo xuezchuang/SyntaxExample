@@ -2,3 +2,5 @@
 x64
 .user
 /thirdy
+/packages
+/UE/packages.config

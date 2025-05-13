@@ -40,4 +40,7 @@
     <ClInclude Include="WindowsRunnableThread.h" />
     <ClInclude Include="Event.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
 </Project>

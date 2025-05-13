@@ -1,0 +1,35 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<!-- 设置基础路径（.targets 所在目录为 build\native）-->
+	<PropertyGroup>
+		<mimalloc_PackageRoot>$(MSBuildThisFileDirectory)</mimalloc_PackageRoot>
+		<mimalloc_Include>
+			$(mimalloc_PackageRoot)include
+		</mimalloc_Include>
+		<mimalloc_Lib_Debug>$(mimalloc_PackageRoot)lib\debug</mimalloc_Lib_Debug>
+		<mimalloc_Lib_Release>$(mimalloc_PackageRoot)lib\release</mimalloc_Lib_Release>
+	</PropertyGroup>
+
+	<!-- 添加 include、lib 搜索路径，链接 lib -->
+	<ItemDefinitionGroup Condition="'$(Configuration)' == 'Debug'">
+		<ClCompile>
+			<AdditionalIncludeDirectories>$(mimalloc_Include);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<AdditionalLibraryDirectories>$(mimalloc_Lib_Debug);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+			<AdditionalDependencies>advapi32.lib;mimalloc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+		</Link>
+	</ItemDefinitionGroup>
+
+	<ItemDefinitionGroup Condition="'$(Configuration)' == 'Release'">
+		<ClCompile>
+			<AdditionalIncludeDirectories>$(mimalloc_Include);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<AdditionalLibraryDirectories>$(mimalloc_Lib_Release);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+			<AdditionalDependencies>advapi32.lib;mimalloc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+		</Link>
+	</ItemDefinitionGroup>
+
+
+</Project>
