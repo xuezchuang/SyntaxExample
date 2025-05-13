@@ -470,3 +470,8 @@ private:
 	/** A reference counted pointer to the completion event which lists the tasks that have me as a prerequisite. **/
 	FGraphEventRef				Subsequents;
 };
+
+
+#define ALLOC_COMMAND(...) new ( AllocCommand(sizeof(__VA_ARGS__), alignof(__VA_ARGS__)) ) __VA_ARGS__
+
+//ALLOC_COMMAND(FRHICommandDrawIndexedPrimitive)(IndexBuffer, BaseVertexIndex, FirstInstance, NumVertices, StartIndex, NumPrimitives, NumInstances);

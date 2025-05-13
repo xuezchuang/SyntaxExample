@@ -2,6 +2,7 @@
 #include < windows.h >
 #include <new> // 这是 C++ 标准库定义 placement new 所必需的
 
+#include "../thirdy/mimalloc/include/mimalloc.h"
 
 void LockFreeLinksExhausted(uint32 TotalNum)
 {
@@ -10,7 +11,9 @@ void LockFreeLinksExhausted(uint32 TotalNum)
 
 void* LockFreeAllocLinks(SIZE_T AllocSize)
 {
-	return ::malloc(AllocSize);
+	uint32 Alignment = uint32(AllocSize >= 16 ? 16 : 8);
+	//return ::malloc(AllocSize);
+	return  mi_malloc_aligned(AllocSize, Alignment);
 }
 
 void LockFreeFreeLinks(SIZE_T AllocSize, void* Ptr)
