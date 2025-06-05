@@ -1,35 +1,11 @@
 #include <iostream>
 #include <memory>
+#include "../Invoke.h"
 using namespace std;
 
-template <typename T> struct TRemoveReference { typedef T Type; };
-template <typename T> struct TRemoveReference<T& > { typedef T Type; };
-template <typename T> struct TRemoveReference<T&&> { typedef T Type; };
 
-template <typename T> struct TRemovePointer { typedef T Type; };
-template <typename T> struct TRemovePointer<T*> { typedef T Type; };
 
-/**
- * Forward will cast a reference to an rvalue reference.
- * This is UE's equivalent of std::forward.
- */
-template <typename T>
-T&& Forward(typename TRemoveReference<T>::Type& Obj)
-{
-	return (T&&)Obj;
-}
 
-template <typename T>
-T&& Forward(typename TRemoveReference<T>::Type&& Obj)
-{
-	return (T&&)Obj;
-}
-
-template <typename FuncType, typename... ArgTypes>
-auto Invoke(FuncType&& Func, ArgTypes&&... Args) //-> decltype(Forward<FuncType>(Func)(Forward<ArgTypes>(Args)...))
-{
-	return Forward<FuncType>(Func)(Forward<ArgTypes>(Args)...);
-}
 
 
 template <typename Functor, typename FuncType>
@@ -55,6 +31,11 @@ struct TFunctionRefCaller<Functor, void(ParamTypes...)>
 
 #include "DelegateSignatureImpl.h"
 
+int Global_Num = 0;
+void TestStaticRowFunc(int a, int b)
+{
+	Global_Num = a + b;
+}
 
 
 
@@ -63,20 +44,28 @@ int main()
 	typedef TDelegate<void(int,int,int)> DelegateTest;
 
 	int tol = 0;
-	DelegateTest Delegate_b;
-	{
-		DelegateTest Delegate;
+
+	DelegateTest Delegate;
 		
-		Delegate.BindLambda([&](int a, int b, int c)
-			{
-				tol = a + b + c;
-			});
-		//Delegate.Execute(3, 4, 5);
+	Delegate.BindLambda([&](int a, int b, int c)
+		{
+			tol = a + b + c;
+		});
+	//Delegate.Execute(3, 4, 5);
 
-		Delegate_b = Delegate;
-	}
+	Delegate.Execute(3, 4, 5);
+	//
+	
+	//DelegateTest Delegate_Lambda = DelegateTest::CreateLambda([&](int a, int b, int c) {tol = a + b + c; }, 3, 4, 5);
 
-	Delegate_b.Execute(3, 4, 5);
+
+	typedef TDelegate<void(int)> DelegateStaticFunc;
+
+	int nParamB = 4;
+	DelegateStaticFunc Delegate_StaticRow = DelegateStaticFunc::CreateStatic(&TestStaticRowFunc, nParamB);
+
+	
+	Delegate_StaticRow.Execute(1);
 
 	//typedef TDelegate<void()> DelegateNoParam;
 	//DelegateNoParam DelegateInstanceNoparam;

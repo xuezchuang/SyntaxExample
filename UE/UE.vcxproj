@@ -150,9 +150,6 @@
     <ClCompile Include="ThreadingBase.cpp" />
     <ClCompile Include="WindowsRunnableThread.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\packages\HBAO.1.0.5\build\native\HBAO.targets" Condition="Exists('..\packages\HBAO.1.0.5\build\native\HBAO.targets')" />

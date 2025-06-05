@@ -74,5 +74,14 @@
     <ClInclude Include="function\Function.h">
       <Filter>源文件\ue_function</Filter>
     </ClInclude>
+    <ClInclude Include="Tuple.h">
+      <Filter>源文件\ue_delegate</Filter>
+    </ClInclude>
+    <ClInclude Include="Invoke.h">
+      <Filter>源文件\ue_delegate</Filter>
+    </ClInclude>
+    <ClInclude Include="RemoveReference.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

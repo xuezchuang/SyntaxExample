@@ -1,5 +1,6 @@
 #pragma once
 #include "DelegateInstanceInterface.h"
+#include "..\Tuple.h"
 
 template <typename FuncType, typename UserPolicy, typename... VarTypes>
 class TCommonDelegateInstanceState : IBaseDelegateInstance<FuncType, UserPolicy>
@@ -7,7 +8,7 @@ class TCommonDelegateInstanceState : IBaseDelegateInstance<FuncType, UserPolicy>
 public:
 	template <typename... InVarTypes>
 	explicit TCommonDelegateInstanceState(InVarTypes&&... Vars)
-		//: Payload(Forward<InVarTypes>(Vars)...)
+		: Payload(Forward<InVarTypes>(Vars)...)
 		//, Handle (FDelegateHandle::GenerateNewHandle)
 	{
 		int b = 0;
@@ -19,8 +20,8 @@ public:
 	//}
 
 protected:
-	//// Payload member variables (if any).
-	//TTuple<VarTypes...> Payload;
+	// Payload member variables (if any).
+	TTuple<VarTypes...> Payload;
 
 	//// The handle of this delegate
 	//FDelegateHandle Handle;
@@ -81,7 +82,7 @@ private:
 
 	using Super            = TCommonDelegateInstanceState<RetValType(ParamTypes...), UserPolicy, VarTypes...>;
 	using DelegateBaseType = typename UserPolicy::FDelegateExtras;
-
+	using UnwrappedThisType = TBaseFunctorDelegateInstance<RetValType(ParamTypes...), UserPolicy, FunctorType, VarTypes...>;
 public:
 	template <typename InFunctorType, typename... InVarTypes>
 	explicit TBaseFunctorDelegateInstance(InFunctorType&& InFunctor, InVarTypes&&... Vars)
@@ -123,7 +124,8 @@ public:
 
 	RetValType Execute(ParamTypes... Params) const final
 	{
-		return Functor(Params...);// this->Payload.ApplyAfter(Functor, Params...);
+		//return Functor(Params...);
+		return this->Payload.ApplyAfter(Functor, Params...);
 	}
 
 	bool ExecuteIfSafe(ParamTypes... Params) const final
@@ -146,10 +148,108 @@ public:
 	};
 	//Struct_Copy jjj;
 	FTest m_a;
+
 private:
 	// C++ functor
 	// We make this mutable to allow mutable lambdas to be bound and executed.  We don't really want to
 	// model the Functor as being a direct subobject of the delegate (which would maintain transivity of
 	// const - because the binding doesn't affect the substitutability of a copied delegate.
 	mutable typename TRemoveConst<FunctorType>::Type Functor;
+};
+
+
+/**
+* Implements a delegate binding for regular C++ functions.
+*/
+template <typename FuncType, typename UserPolicy, typename... VarTypes>
+class TBaseStaticDelegateInstance;
+
+template <typename RetValType, typename... ParamTypes, typename UserPolicy, typename... VarTypes>
+class TBaseStaticDelegateInstance<RetValType(ParamTypes...), UserPolicy, VarTypes...> : public TCommonDelegateInstanceState<RetValType(ParamTypes...), UserPolicy, VarTypes...>
+{
+private:
+	using Super            = TCommonDelegateInstanceState<RetValType(ParamTypes...), UserPolicy, VarTypes...>;
+	using DelegateBaseType = typename UserPolicy::FDelegateExtras;
+
+public:
+	using FFuncPtr = RetValType(*)(ParamTypes..., VarTypes...);
+
+	template <typename... InVarTypes>
+	explicit TBaseStaticDelegateInstance(FFuncPtr InStaticFuncPtr, InVarTypes&&... Vars)
+		: Super        (Forward<InVarTypes>(Vars)...)
+		, StaticFuncPtr(InStaticFuncPtr)
+	{
+		//check(StaticFuncPtr != nullptr);
+	}
+
+	// IDelegateInstance interface
+
+#if USE_DELEGATE_TRYGETBOUNDFUNCTIONNAME
+
+	FName TryGetBoundFunctionName() const final
+	{
+		return NAME_None;
+	}
+
+#endif
+
+	//UObject* GetUObject() const final
+	//{
+	//	return nullptr;
+	//}
+
+	const void* GetObjectForTimerManager() const final
+	{
+		return nullptr;
+	}
+
+	int GetBoundProgramCounterForTimerManager() const final
+	{
+		return 0;
+	}
+
+	// Deprecated
+	bool HasSameObject(const void* UserObject) const final
+	{
+		// Raw Delegates aren't bound to an object so they can never match
+		return false;
+	}
+
+	bool IsSafeToExecute() const final
+	{
+		// Static functions are always safe to execute!
+		return true;
+	}
+
+public:
+
+	// IBaseDelegateInstance interface
+
+	void CreateCopy(DelegateBaseType& Base) const final
+	{
+		new (Base) TBaseStaticDelegateInstance(*this);
+	}
+
+	RetValType Execute(ParamTypes... Params) const final
+	{
+		// Call the static function
+		//checkSlow(StaticFuncPtr != nullptr);
+
+		return this->Payload.ApplyAfter(StaticFuncPtr, Params...);
+	}
+
+	bool ExecuteIfSafe(ParamTypes... Params) const final
+	{
+		// Call the static function
+		//checkSlow(StaticFuncPtr != nullptr);
+
+		(void)this->Payload.ApplyAfter(StaticFuncPtr, Params...);
+
+		return true;
+	}
+
+private:
+
+	// C++ function pointer.
+	FFuncPtr StaticFuncPtr;
 };

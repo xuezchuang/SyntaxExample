@@ -10,6 +10,12 @@ class TDelegate
 	static_assert("Expected a function signature for the delegate template parameter");
 };
 
+
+
+template <typename T>
+using TIdentity_T = typename TIdentity<T>::Type;
+typedef decltype(nullptr)		TYPE_OF_NULLPTR;
+
 template <typename InRetValType, typename... ParamTypes, typename UserPolicy>
 class TDelegate<InRetValType(ParamTypes...), UserPolicy> : public TDelegateBase<UserPolicy>
 {
@@ -17,10 +23,34 @@ class TDelegate<InRetValType(ParamTypes...), UserPolicy> : public TDelegateBase<
 	using DelegateInstanceInterfaceType = IBaseDelegateInstance<FuncType, UserPolicy>;
 	typedef InRetValType RetValType;
 public:
+
 	/**
- * Static: Binds a C++ lambda delegate
- * technically this works for any functor types, but lambdas are the primary use case
- */
+	* Static: Creates a C++ lambda delegate
+	* technically this works for any functor types, but lambdas are the primary use case
+	*/
+	template<typename FunctorType, typename... VarTypes>
+	inline static TDelegate<RetValType(ParamTypes...), UserPolicy> CreateLambda(FunctorType&& InFunctor, VarTypes&&... Vars)
+	{
+		TDelegate<RetValType(ParamTypes...), UserPolicy> Result;
+		new (Result) TBaseFunctorDelegateInstance<FuncType, UserPolicy, typename TRemoveReference<FunctorType>::Type, std::decay_t<VarTypes>...>(Forward<FunctorType>(InFunctor), Forward<VarTypes>(Vars)...);
+		return Result;
+	}
+
+	/**
+	* Static: Creates a raw C++ pointer global function delegate
+	*/
+	template <typename... VarTypes>
+	inline static TDelegate<RetValType(ParamTypes...), UserPolicy> CreateStatic(typename TIdentity<RetValType (*)(ParamTypes..., std::decay_t<VarTypes>...)>::Type InFunc, VarTypes&&... Vars)
+	{
+		TDelegate<RetValType(ParamTypes...), UserPolicy> Result;
+		new (Result) TBaseStaticDelegateInstance<FuncType, UserPolicy, std::decay_t<VarTypes>...>(InFunc, Forward<VarTypes>(Vars)...);
+		return Result;
+	}
+
+	/**
+	* Static: Binds a C++ lambda delegate
+	* technically this works for any functor types, but lambdas are the primary use case
+	*/
 	template<typename FunctorType, typename... VarTypes>
 	inline void BindLambda(FunctorType&& InFunctor, VarTypes&&... Vars)
 	{
@@ -50,6 +80,20 @@ public:
 		return (DelegateInstanceInterfaceType*)Super::GetDelegateInstanceProtected();
 	}
 
+	/**
+	* Default constructor
+	*/
+	inline TDelegate()
+	{
+	}
+
+	/**
+	* 'Null' constructor
+	*/
+	inline TDelegate(TYPE_OF_NULLPTR)
+	{
+	}
+
 	TDelegate& operator=(const TDelegate& Other)
 	{
 		if (&Other != this)
@@ -68,5 +112,10 @@ public:
 		}
 
 		return *this;
+	}
+
+	inline TDelegate(const TDelegate& Other)
+	{
+		*this = Other;
 	}
 };
