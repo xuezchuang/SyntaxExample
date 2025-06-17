@@ -398,3 +398,219 @@ int main()
 
 	return 0;
 }
+
+/*
+
+FORCEINLINE_DEBUGGABLE void EnqueueUniqueRenderCommand(LAMBDA&& Lambda)
+
+
+FRHICommandList::DrawIndexedPrimitive
+FRHICOMMAND_MACRO(FRHICommandDrawIndexedPrimitive)
+
+
+//RHI Thread
+FD3D12CommandContext::RHIDrawIndexedPrimitive
+
+
+bool FMeshDrawCommand::SubmitDrawBegin
+void FDeferredShadingSceneRenderer::RenderPrePass(FRDGBuilder& GraphBuilder, FRDGTextureRef SceneDepthTexture, FInstanceCullingManager& InstanceCullingManager)
+FDeferredShadingSceneRenderer::Render
+RenderViewFamilies_RenderThread
+ENQUEUE_RENDER_COMMAND(FDrawSceneCommand)
+
+Trace.File
+Trace.Stop
+
+SCOPED_NAMED_EVENT_TEXT
+SCOPED_NAMED_EVENT
+
+[GameThread]
+
+UEditorEngine::UpdateSingleViewportClient
+	FViewport::Draw
+		void FEditorViewportClient::Draw
+			CalcSceneView
+				View->EndFinalPostprocessSettings
+			for (auto ViewExt : ViewFamily.ViewExtensions)
+			{
+				ViewExt->SetupViewFamily(ViewFamily);
+			}
+			GetRendererModule().BeginRenderingViewFamily
+
+FRendererModule::BeginRenderingViewFamilies
+[RenderThread]
+RenderViewFamilies_RenderThread
+	ViewExtensionPreRender_RenderThread
+		ISceneViewExtension::PreRenderView_RenderThread
+	FDeferredShadingSceneRenderer::Render
+		Scene->UpdateAllPrimitiveSceneInfos					2445
+		BeginInitViews										2638
+			ComputeViewVisibility							5293
+				GatherDynamicMeshElements
+				SetupMeshPass
+					FParallelMeshDrawCommandPass::DispatchPassSetup
+		CommitFinalPipelineState							2670
+			CommitIndirectLightingState
+		FSceneTextures::InitializeViewFamily(GraphBuilder, ViewFamily);		2805
+		FSceneTextures& SceneTextures = GetActiveSceneTextures();			2806
+		EndInitViews										2953
+			FinishInitDynamicShadows
+				GatherShadowDynamicMeshElements
+					SetupMeshDrawCommandsForShadowDepth
+						ShadowDepthPass.DispatchPassSetup
+		RenderPrePass(GraphBuilder, SceneTextures.Depth.Target, InstanceCullingManager);	2993
+			View.ParallelMeshDrawCommandPasses[EMeshPass::DepthPass].DispatchDraw
+		RenderOcclusion										3271
+		FDeferredShadingSceneRenderer::RenderBasePass		3431
+			RenderBasePassInternal
+				View.ParallelMeshDrawCommandPasses[EMeshPass::BasePass].DispatchDraw
+				View.ParallelMeshDrawCommandPasses[EMeshPass::SkyPass].DispatchDraw
+		CompositionLighting.ProcessAfterBasePass			3691
+			AddPostProcessingAmbientOcclusion
+		RenderLights										3757
+			RenderDeferredShadowProjections
+			RenderLight
+		RenderDiffuseIndirectAndAmbientOcclusion			3764
+		RenderDeferredReflectionsAndSkyLighting				3775
+			AddSkyReflectionPass							2012
+		AddSubsurfacePass
+		AddPostProcessingPasses
+			AddDownsamplePass
+
+	
+*/
+
+/*
+
+FParallelMeshDrawCommandPass::DispatchPassSetup
+	FMeshDrawCommandPassSetupTask
+		GenerateDynamicMeshDrawCommands
+			FDepthPassMeshProcessor::AddMeshBatch
+				FMeshPassProcessor::BuildMeshDrawCommands
+
+FParallelMeshDrawCommandPass::DispatchDraw
+	FRHICommandList* CmdList = ParallelCommandListSet->NewParallelCommandList();
+	FDrawVisibleMeshCommandsAnyThreadTask(CmdList) 开启并行线程录制命令
+		FInstanceCullingContext::SubmitDrawCommands
+			FMeshDrawCommand::SubmitDraw
+	ParallelCommandListSet->AddParallelCommandList(CmdList, AnyThreadCompletionEvent, NumDraws);
+
+从 TaskContext.PassType可以看到Type
+*/
+
+
+/**
+* 
+* FDepthPassMeshProcessor::Process
+*/
+
+/**
+
+FScene::AddPrimitive
+
+SetGraphicsPipelineState
+FRHICommandList::SetGraphicsPipelineState
+FRHICOMMAND_MACRO(FRHICommandSetGraphicsPipelineState)
+FRHICommandSetGraphicsPipelineState::Execute
+RHISetGraphicsPipelineState
+
+
+FRHICommandList::SDrawIndexedPrimitive
+
+
+ */
+
+/**
+ * 
+ * *((UnrealEditor-Engine-Win64-Debug.dll!FLocalVertexFactory*)VertexFactory)->GetType()
+ * UnrealEditor-Engine-Win64-Debug.dll!FLocalVertexFactory
+ * ((TArray<FRDGPass *,TSizedInlineAllocator<1,32,TRDGArrayAllocator<0> > >::ElementType*)ResourcePass->ResourcesToBegin.AllocatorInstance.InlineData)[0]->TextureStates
+ * 
+ * 
+ */
+
+/*
+
+FD3D12TransientResourceHeapAllocator::CreateTexture
+GraphBuilder.AllocParameters
+GraphBuilder.CreateUniformBuffer
+
+*/
+
+
+/**
+ * 取消勾选PostProcessingEnable,在AmbientOcclusion的Intensity勾选,还是不能计算AO的原因
+ * FEngineShowFlags::DisableAdvancedFeatures
+ * 在FSceneView::EndFinalPostprocessSettings中,会强制对AmbientOcclusionIntensity设置的数据设置为0.
+ * 	if(!Family->EngineShowFlags.AmbientOcclusion || !Family->EngineShowFlags.ScreenSpaceAO)
+	{
+		FinalPostProcessSettings.AmbientOcclusionIntensity = 0;
+	}
+
+ */
+
+/**	RHIThread 是怎么和其他线程(RenderThread,其他线程也可以分配ParentCmdList)消费/生产锁的.
+* FRHICommandBase*    Root
+* FRHICommandListImmediate::ExecuteAndReset
+* FRHICommandList::DrawIndexedPrimitiveIndirect
+* FParallelCommandListSet::Dispatch中调用<FRHICommandListImmediate::QueueAsyncCommandListSubmit>
+*	将ParallelCommand 给到FRHICommandListImmediate也就是RHI的总Command中
+* FRDGBuilder::Execute
+* 
+* 
+* QueueAsyncCommandListSubmit
+*	CmdList->WaitForDispatchEvent();在RHIThread中会检查等待命令列表是否录制完成.DispatchEvent->IsComplete()
+* FRHICommandListBase::FinishRecording
+*	DispatchEvent->DispatchSubsequents();在别的线程中录制命令完成
+* 
+* 在FMeshDrawCommandPassSetupTask中,这个任务在FParallelMeshDrawCommandPass::DispatchPassSetup创建
+* GenerateDynamicMeshDrawCommands
+ */
+
+/**
+ * GatherDynamicMeshElements
+	PrimitiveSceneInfo->Proxy->GetDynamicMeshElements(FStaticMeshSceneProxy::GetDynamicMeshElements)
+		FStaticMeshSceneProxy::GetMeshElement
+		Collector.AddMesh(ViewIndex, MeshElement);
+			
+ *
+ * MeshDrawCommand.VertexStreams	VertexBuffer
+ * FVertexFactory::GetStreams
+ * 
+ * 顶点数据在这个函数初始化FStaticMeshLODResources::InitResources
+ * 在RenderThread0中是FPositionVertexBuffer::InitRHI
+ *		FShaderResourceViewRHIRef FD3D12DynamicRHI::RHICreateShaderResourceView(const FShaderResourceViewInitializer& Initializer)
+ * FBufferRHIRef FPositionVertexBuffer::CreateRHIBuffer_Internal() 创建顶点资源
+ * FStaticMeshRenderData::InitResources
+ * FStaticMeshVertexFactories::InitVertexFactory 将创建好的PositionVertexBuffer
+ * FStaticMeshVertexFactories::InitResources这个函数做的就是把FStaticMeshVertexFactories::VertexFactory绑定到刚刚创建的
+ * UStaticMeshComponent::CreateSceneProxy
+ */
+
+
+/**  --- 顶点数据从文件加载后,创建资源到d3d12绑定数据的过程        ---
+ * 1.创建资源	FStaticMeshRenderData::InitResources
+ *		在创建/复制一个StaticMesh后,UStaticMesh::FinishPostLoadInternal --- UStaticMesh::InitResources  --- FStaticMeshRenderData::InitResources
+ *		LODResource和LODVertexFactories会初始化资源.资源存储在FLocalVertexFactory VertexFactory(LODVertexFactories);
+ * 2.拷贝数据	FStaticMeshSceneProxy::GetMeshElement
+ *		callstack
+ *		FDeferredShadingSceneRenderer::BeginInitViews
+ *			FSceneRenderer::ComputeViewVisibility
+ *				FSceneRenderer::GatherDynamicMeshElements
+ *					FStaticMeshSceneProxy::GetDynamicMeshElements
+ *						FStaticMeshSceneProxy::GetMeshElement
+ *		这个流程中,会把需要绘制的数据拷贝到	FSceneRenderer::TArray<FViewInfo> Views;中TArray<FMeshBatchAndRelevance,SceneRenderingAllocator> DynamicMeshElements
+ *		数据是在View[0].DynamicMeshElements中 
+ *	3.传Pass	FMeshPassProcessor::BuildMeshDrawCommands
+ *		FParallelMeshDrawCommandPass::DispatchPassSetup会调用FMeshDrawCommandPassSetupTask在任务中执行以下操作.
+ *		VertexFactory->GetStreams(FeatureLevel, InputStreamType, SharedMeshDrawCommand.VertexStreams);
+ *		会从VertexFactory取到需要的顶点资源放到SharedMeshDrawCommand.VertexStreams
+ *	4.绑定RHI
+ *		在FDeferredShadingSceneRenderer::RenderPrePass或者其他pass中执行绘图命令
+ *		GraphBuilder.AddPass中的View.ParallelMeshDrawCommandPasses[EMeshPass::DepthPass].DispatchDraw分配任务FDrawVisibleMeshCommandsAnyThreadTask
+ *		任务中执行FMeshDrawCommand::SubmitDrawBegin,RHICmdList.SetStreamSource(Stream.StreamIndex, ScenePrimitiveIdsBuffer, PrimitiveIdOffset);
+ *		绑定了顶点的GPU资源
+ *			
+ *			
+ * 
+ */
