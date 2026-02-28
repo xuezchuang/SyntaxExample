@@ -399,6 +399,7 @@ int main()
 	return 0;
 }
 
+/* Render Frame */
 /*
 
 FORCEINLINE_DEBUGGABLE void EnqueueUniqueRenderCommand(LAMBDA&& Lambda)
@@ -444,6 +445,7 @@ RenderViewFamilies_RenderThread
 		ISceneViewExtension::PreRenderView_RenderThread
 	FDeferredShadingSceneRenderer::Render
 		Scene->UpdateAllPrimitiveSceneInfos					2445
+			FMaterialRenderProxy::UpdateDeferredCachedUniformExpressions();
 		BeginInitViews										2638
 			ComputeViewVisibility							5293
 				GatherDynamicMeshElements
@@ -467,6 +469,7 @@ RenderViewFamilies_RenderThread
 				View.ParallelMeshDrawCommandPasses[EMeshPass::SkyPass].DispatchDraw
 		CompositionLighting.ProcessAfterBasePass			3691
 			AddPostProcessingAmbientOcclusion
+				AddAmbientOcclusionPass
 		RenderLights										3757
 			RenderDeferredShadowProjections
 			RenderLight
@@ -515,7 +518,7 @@ FRHICommandSetGraphicsPipelineState::Execute
 RHISetGraphicsPipelineState
 
 
-FRHICommandList::SDrawIndexedPrimitive
+FRHICommandList::DrawIndexedPrimitive
 
 
  */
@@ -567,6 +570,8 @@ GraphBuilder.CreateUniformBuffer
 * GenerateDynamicMeshDrawCommands
  */
 
+
+/* 顶点数据的生成以及Uniform的生成 */
 /**
  * GatherDynamicMeshElements
 	PrimitiveSceneInfo->Proxy->GetDynamicMeshElements(FStaticMeshSceneProxy::GetDynamicMeshElements)
@@ -588,8 +593,8 @@ GraphBuilder.CreateUniformBuffer
  */
 
 
-/**  --- 顶点数据从文件加载后,创建资源到d3d12绑定数据的过程        ---
- * 1.创建资源	FStaticMeshRenderData::InitResources
+/**  --- 顶点数据从文件加载后,创建资源到d3d12绑定数据的过程        ---*/
+/* 1.创建资源	FStaticMeshRenderData::InitResources
  *		在创建/复制一个StaticMesh后,UStaticMesh::FinishPostLoadInternal --- UStaticMesh::InitResources  --- FStaticMeshRenderData::InitResources
  *		LODResource和LODVertexFactories会初始化资源.资源存储在FLocalVertexFactory VertexFactory(LODVertexFactories);
  * 2.拷贝数据	FStaticMeshSceneProxy::GetMeshElement
@@ -601,7 +606,7 @@ GraphBuilder.CreateUniformBuffer
  *						FStaticMeshSceneProxy::GetMeshElement
  *		这个流程中,会把需要绘制的数据拷贝到	FSceneRenderer::TArray<FViewInfo> Views;中TArray<FMeshBatchAndRelevance,SceneRenderingAllocator> DynamicMeshElements
  *		数据是在View[0].DynamicMeshElements中 
- *	3.传Pass	FMeshPassProcessor::BuildMeshDrawCommands
+ *	3.传Pass	FDepthPassMeshProcessor::Process	FMeshPassProcessor::BuildMeshDrawCommands
  *		FParallelMeshDrawCommandPass::DispatchPassSetup会调用FMeshDrawCommandPassSetupTask在任务中执行以下操作.
  *		VertexFactory->GetStreams(FeatureLevel, InputStreamType, SharedMeshDrawCommand.VertexStreams);
  *		会从VertexFactory取到需要的顶点资源放到SharedMeshDrawCommand.VertexStreams
@@ -612,5 +617,157 @@ GraphBuilder.CreateUniformBuffer
  *		绑定了顶点的GPU资源
  *			
  *			
+ * 
+ */
+
+
+/** HLSL
+ * void CalcPixelMaterialInputs
+ * WriteMaterialUniformAccess 导出hlsl
+ * 
+ */
+
+/* Material Instance */
+/**
+ * FMaterialInstanceResource::InitMIParameters 资源初始化
+ * FUniformExpressionCacheAsyncUpdater::Update 更新material资源
+ * 更新好的是 FMaterialRenderProxy::UniformExpressionCache
+ * 使用在	PassShaders.VertexShader->GetShaderBindings
+ *				FMaterialShader::GetShaderBindings
+ * 中这样直接调用缓存好的UniformBuffer. ShaderBindings.Add(MaterialUniformBuffer, UniformExpressionCache.UniformBuffer);
+ * 
+ */
+
+/* SetGraphicsRootConstantBufferView */
+/*
+* 以Water示例,FD3D12CommandContext::RHIDrawIndexedPrimitive中StateCache.ApplyState(ED3D12PipelineType::Graphics);要以NumVertices断点
+* 具体的数量可以在void FMeshDrawCommand::SubmitDrawEnd中断点查询到.
+* ApplyConstants(PSOCommonData->RootSignature, StartStage, EndStage);
+*	DescriptorCache.SetRootConstantBuffers
+*		Context.GraphicsCommandList()->SetGraphicsRootConstantBufferView(BaseIndex + SlotIndex, CurrentGPUVirtualAddress);
+* 以上为RHI绑定CBV.以下为创建CBV和设置到缓存中.
+* bool FMeshDrawCommand::SubmitDrawBegin
+*	void FMeshDrawShaderBindings::SetOnCommandList
+*		FMeshDrawShaderBindings::SetShaderBindings
+*			RHICmdList.SetShaderUniformBuffer
+* 
+* 以下为调用RHI接口设置CBV缓存
+* RHICmdList.SetShaderUniformBuffer
+*	void FD3D12CommandContext::RHISetShaderUniformBuffer(FRHIGraphicsShader* ShaderRHI, uint32 BufferIndex, FRHIUniformBuffer* BufferRHI)
+*		static void BindUniformBuffer
+*			Context.StateCache.SetConstantsFromUniformBuffer(ShaderFrequency, BufferIndex, InBuffer);
+* 
+* -----------------------------------------------------------------------------------------------------------------------------------------------
+* MeshDrawCommand.ShaderBindings 存储了
+* FMeshPassProcessor::BuildMeshDrawCommands构建这个数据
+* 
+* 
+* FDrawCommandRelevancePacket::AddCommandsForMesh 添加mesh时,把UniformBuffer添加上
+* FRelevancePacket::RenderThreadFinalize时,放到view的DynamicMeshCommandBuildRequests结构体中保存
+*/
+
+
+/* 绑定StaticUniformBuffers */
+/*
+* 1.在FRDGParallelCommandListSet中的FParallelCommandListBindings构造中,绑定所有的静态UniformBuffers
+* 2.在FParallelMeshDrawCommandPass::DispatchDraw中,ParallelCommandListSet->NewParallelCommandList中对每一个comandlist预先设置SetStateOnCommandList
+* 
+* 
+* 5.在RHIThread的FD3D12CommandContext::RHISetGraphicsPipelineState中,设置全局静态UniformBuffers
+* 
+* 
+* 
+*/
+
+/* CBV,SBV等BaseIndex如何通过const uint32 BaseIndex = RootSignature->CBVRDBaseBindSlot(ShaderStage);寻找位置 */
+/**
+ * 
+ * FSingleLayerWaterPassParameters::FTypeInfo::GetStructMetadata()
+ */
+
+
+/*BuildConfiguration.xml文件中指定 MSVC版本和SDK 版本*/
+/*
+* <Configuration xmlns="https://www.unrealengine.com/BuildConfiguration">
+	<WindowsPlatform>
+		<CompilerVersion >14.40.33807</CompilerVersion>
+		<WindowsSdkVersion  >10.0.19041.0</WindowsSdkVersion>
+	</WindowsPlatform>
+</Configuration>
+*/
+
+
+/* 设置CBV */
+/*
+* FSimpleShader::SetParameters
+*	SetShaderValue
+*		FRHICommandList::SetShaderParameter
+*			FRHIParameterBatcher::SetShaderParameter 
+* 
+* FRHICommandSetShaderParameters.Execute
+*	FD3D12CommandContext.RHISetShaderParameters
+*		SetShaderParametersOnContext
+* 
+* SetShaderParametersOnContext里把常量ConstantBuffer.UpdateConstant更新到ConstantBuffer,ConstantBuffer仅仅是CPU内存中的数据,并没有更新到GPU资源里
+* 
+* FD3D12CommandContext.RHIDrawIndexedPrimitive
+*	FD3D12CommandContext.CommitNonComputeShaderConstants
+*		FD3D12StateCache.SetConstantBuffer
+*	FD3D12StateCache.ApplyState
+*		FD3D12StateCache.ApplyResources 
+*			FD3D12DescriptorCache.SetSRVs 
+*		FD3D12StateCache.ApplyConstants
+*			FD3D12DescriptorCache.SetRootConstantBuffers 
+*
+* FD3D12StateCache.ApplyState里断点
+* PipelineState.Graphics.CurrentPipelineStateObject==0x000005a3ca262d00
+* PipelineState.Graphics.CurrentPipelineStateObject.Reference && PipelineState.Graphics.CurrentPipelineStateObject.Reference->PipelineStateInitializer.BoundShaderState.VertexShaderRHI == 0x000005a3ff8ee100
+* 
+* 
+* FD3D12StateCache.SetConstantBuffer 
+* 在这个函数中,FD3D12ResourceLocation Location(GetParentDevice());这样拿到upload的资源和cpu端的内存地址,然后ConstantBuffer.Version把数据拷贝Location
+* 这个数据是upload,可以拿到GetGPUVirtualAddress,赋值给FD3D12StateCache.PipelineState.Common.CBVCache
+* 
+* FD3D12StateCache.ApplyConstants里把 FD3D12StateCache.PipelineState.Common.CBVCache 的GPUVirtualAddress传给d3d12函数SetGraphicsRootConstantBufferView
+* 
+*/
+
+/*	GraphicsPipeline	*/	
+/**
+ * RenderThread线程里 SetGraphicsPipelineState
+ * RHIThread:
+ * FRHICommandSetGraphicsPipelineState.Execute 
+ *	FD3D12CommandContext.RHISetGraphicsPipelineState 
+ *		FD3D12StateCache.SetGraphicsPipelineState 
+ * 在 RenderThread线程的函数SetGraphicsPipelineState 创建的是 FGraphicsPipelineState
+ * 在FD3D12StateCache.SetGraphicsPipelineState 里只需要FD3D12GraphicsPipelineState既可以,这个数据是FGraphicsPipelineState的数据,所以拿到这个数据做断点就可以.
+ * 
+ */
+
+
+/* 设置SRV */
+/** FSimpleShader::SetParameters - SetTextureParameter - FRHICommandList.SetShaderTexture  - ParameterBatcher.SetShaderTexture
+ * FRHICommandList.DrawIndexedPrimitive - FRHIParameterBatcher.PreDraw  - FRHICommandList.SetBatchedShaderParameters - FRHICommandList.SetShaderParameters 
+ *		- ALLOC_COMMAND(FRHICommandSetShaderParameters<FRHIGraphicsShader>)
+ * 这样在RenderThread里把设置的参数给到了RHIThread线程里
+ * FRHICommandSetShaderParameters.Execute - FD3D12CommandContext.RHISetShaderParameters - SetShaderParametersOnContext 
+ * SetShaderParametersOnContext里把常量ConstantBuffer.UpdateConstant更新到ConstantBuffer,ConstantBuffer并不是
+ * 
+ * FD3D12DescriptorCache.SetSRVs 中
+ *	CurrentViewHeap 就是我们理解的DescriptorHeap,把Offline的CPUhandle 也就是Texture的cpuhandle copy到shaderview的GPUHandle上,然后在ApplyState里把这个GPUHandle绑定到d3d12的SetGraphicsRootDescriptorTable里
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
  * 
  */

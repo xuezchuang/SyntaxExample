@@ -64,7 +64,7 @@ int main()
 	int nParamB = 4;
 	DelegateStaticFunc Delegate_StaticRow = DelegateStaticFunc::CreateStatic(&TestStaticRowFunc, nParamB);
 
-	
+	nParamB = 5;
 	Delegate_StaticRow.Execute(1);
 
 	//typedef TDelegate<void()> DelegateNoParam;
